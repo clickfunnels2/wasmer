@@ -1,7 +1,8 @@
 use super::super::store::wasm_store_t;
 use super::super::types::{wasm_ref_t, wasm_table_size_t, wasm_tabletype_t};
 use super::wasm_extern_t;
-use wasmer_api::Extern;
+use wasmer_api::{Extern, Table, Function, Value};
+
 
 #[allow(non_camel_case_types)]
 #[repr(C)]
@@ -21,11 +22,23 @@ impl wasm_table_t {
 
 #[no_mangle]
 pub unsafe extern "C" fn wasm_table_new(
-    _store: Option<&wasm_store_t>,
+    _store: Option<&mut wasm_store_t>,
     _table_type: Option<&wasm_tabletype_t>,
     _init: *const wasm_ref_t,
 ) -> Option<Box<wasm_table_t>> {
-    todo!("get val from init somehow");
+    let store = _store?;
+    let mut store_mut = store.inner.store_mut();
+
+    let table_type = _table_type?;
+    let table_type = table_type.inner()._table_type;
+
+    let f = Function::new_typed(&mut store_mut, || {});
+    // let table = c_try!(Memory::new(&mut store_mut, memory_type));
+    let table = c_try!(Table::new(&mut store_mut, table_type, Value::FuncRef(Some(f))));
+    Some(Box::new(wasm_table_t {
+        extern_: wasm_extern_t::new(store.inner.clone(), table.into())
+    }))
+    // todo!("get val from init somehow");
 }
 
 #[no_mangle]
